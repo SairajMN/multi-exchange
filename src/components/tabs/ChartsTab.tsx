@@ -6,18 +6,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { 
-  BarChart3, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
   Eye,
   Settings,
   Maximize,
   Download,
   RefreshCw,
   Target,
-  Zap
+  Zap,
+  Wifi,
+  WifiOff
 } from "lucide-react";
+import { useCryptoData } from "@/hooks/use-crypto-data";
 
 interface ChartData {
   time: number;
@@ -39,8 +42,8 @@ export const ChartsTab = () => {
   const chartRef = useRef<HTMLDivElement>(null);
   const [selectedSymbol, setSelectedSymbol] = useState("BTCUSDT");
   const [selectedTimeframe, setSelectedTimeframe] = useState("1h");
-  const [selectedExchange, setSelectedExchange] = useState("binance");
-  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [selectedExchange, setSelectedExchange] = useState("bybit");
+  const [useRealData, setUseRealData] = useState(false);
   const [indicators, setIndicators] = useState<Indicator[]>([
     { name: "SMA 20", enabled: true, color: "#3B82F6", settings: { period: 20 } },
     { name: "SMA 50", enabled: true, color: "#EF4444", settings: { period: 50 } },
@@ -55,60 +58,88 @@ export const ChartsTab = () => {
   const [livePatternDetection, setLivePatternDetection] = useState(false);
   const [detectedPatterns, setDetectedPatterns] = useState<any[]>([]);
 
-  // Generate sample chart data and live pattern detection
-  useEffect(() => {
-    const generateData = () => {
-      const data: ChartData[] = [];
-      let basePrice = selectedExchange === "dhan" ? 2500 : 43000;
-      const now = Date.now();
-      
-      for (let i = 100; i >= 0; i--) {
-        const time = now - (i * 60 * 60 * 1000); // 1 hour intervals
-        const volatility = selectedExchange === "dhan" ? 0.015 : 0.02;
-        const change = (Math.random() - 0.5) * 2 * volatility;
-        
-        const open = basePrice;
-        const close = open * (1 + change);
-        const high = Math.max(open, close) * (1 + Math.random() * 0.01);
-        const low = Math.min(open, close) * (1 - Math.random() * 0.01);
-        const volume = selectedExchange === "dhan" 
-          ? Math.random() * 50000 + 25000 
-          : Math.random() * 1000000 + 500000;
-        
-        data.push({
-          time,
-          open,
-          high,
-          low,
-          close,
-          volume
-        });
-        
-        basePrice = close;
-      }
-      
-      return data;
-    };
+  // Use the real-time crypto data hook
+  const { currentPrice, chartData: realChartData, isLoading, error, fetchRealTimeData } = useCryptoData();
 
-    setChartData(generateData());
-    
-    // Simulate live pattern detection for Dhan
-    if (selectedExchange === "dhan" && livePatternDetection) {
-      const patterns = [
-        { name: "Ascending Triangle", confidence: 92, type: "bullish" },
-        { name: "Support Level Break", confidence: 85, type: "neutral" },
-        { name: "Double Top Formation", confidence: 78, type: "bearish" },
-      ];
-      setDetectedPatterns(patterns);
+  // Generate sample chart data for fallback
+  const generateSampleData = () => {
+    const data: ChartData[] = [];
+    let basePrice = selectedExchange === "dhan" ? 2500 : 43000;
+    const now = Date.now();
+
+    for (let i = 100; i >= 0; i--) {
+      const time = now - (i * 60 * 60 * 1000); // 1 hour intervals
+      const volatility = selectedExchange === "dhan" ? 0.015 : 0.02;
+      const change = (Math.random() - 0.5) * 2 * volatility;
+
+      const open = basePrice;
+      const close = open * (1 + change);
+      const high = Math.max(open, close) * (1 + Math.random() * 0.01);
+      const low = Math.min(open, close) * (1 - Math.random() * 0.01);
+      const volume = selectedExchange === "dhan"
+        ? Math.random() * 50000 + 25000
+        : Math.random() * 1000000 + 500000;
+
+      data.push({
+        time,
+        open,
+        high,
+        low,
+        close,
+        volume
+      });
+
+      basePrice = close;
     }
-  }, [selectedSymbol, selectedTimeframe, selectedExchange, livePatternDetection]);
+
+    return data;
+  };
+
+  // Use real data or fallback to sample data
+  const chartData = useRealData && realChartData.length > 0 ? realChartData : generateSampleData();
+
+  // Fetch real-time data when symbol or exchange changes
+  useEffect(() => {
+    if (useRealData && selectedExchange !== "dhan") {
+      fetchRealTimeData(selectedSymbol, selectedExchange);
+    }
+  }, [selectedSymbol, selectedExchange, useRealData, fetchRealTimeData]);
+
+  // Auto-refresh real-time data every 30 seconds
+  useEffect(() => {
+    if (!useRealData || selectedExchange === "dhan") return;
+
+    const interval = setInterval(() => {
+      fetchRealTimeData(selectedSymbol, selectedExchange);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [useRealData, selectedSymbol, selectedExchange, fetchRealTimeData]);
 
   const toggleIndicator = (indicatorName: string) => {
-    setIndicators(prev => prev.map(ind => 
-      ind.name === indicatorName 
+    setIndicators(prev => prev.map(ind =>
+      ind.name === indicatorName
         ? { ...ind, enabled: !ind.enabled }
         : ind
     ));
+  };
+
+  const refreshChartData = async () => {
+    if (useRealData && selectedExchange !== "dhan") {
+      fetchRealTimeData(selectedSymbol, selectedExchange);
+    } else {
+      // Simulate refresh for sample data
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Force re-render by updating state
+      setSelectedSymbol(prev => prev);
+    }
+  };
+
+  const toggleRealData = () => {
+    setUseRealData(!useRealData);
+    if (!useRealData && selectedExchange !== "dhan") {
+      fetchRealTimeData(selectedSymbol, selectedExchange);
+    }
   };
 
   const symbols = {
@@ -182,8 +213,8 @@ export const ChartsTab = () => {
     ]
   };
 
-  const currentPrice = chartData.length > 0 ? chartData[chartData.length - 1].close : 0;
-  const priceChange = chartData.length > 1 
+  const sampleCurrentPrice = chartData.length > 0 ? chartData[chartData.length - 1].close : 0;
+  const priceChange = chartData.length > 1
     ? ((chartData[chartData.length - 1].close - chartData[chartData.length - 2].close) / chartData[chartData.length - 2].close) * 100
     : 0;
 
@@ -195,13 +226,22 @@ export const ChartsTab = () => {
           <p className="text-muted-foreground">Real-time price charts with technical analysis</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant={useRealData ? "default" : "outline"}
+            size="sm"
+            onClick={toggleRealData}
+            disabled={selectedExchange === "dhan"}
+          >
+            {useRealData ? <Wifi className="h-4 w-4 mr-2" /> : <WifiOff className="h-4 w-4 mr-2" />}
+            {useRealData ? 'Live Data' : 'Sample Data'}
+          </Button>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+          <Button variant="outline" size="sm" onClick={refreshChartData} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
           </Button>
           <Button variant="outline" size="sm">
             <Maximize className="h-4 w-4 mr-2" />
@@ -209,6 +249,55 @@ export const ChartsTab = () => {
           </Button>
         </div>
       </div>
+
+      {/* Real-time Price Display */}
+      {useRealData && currentPrice && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h3 className="text-lg font-bold">{currentPrice.symbol}</h3>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${currentPrice.price.toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {currentPrice.change24h >= 0 ? (
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                  )}
+                  <span className={`font-medium ${currentPrice.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {currentPrice.change24h >= 0 ? '+' : ''}{currentPrice.change24h.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+              <div className="text-right text-sm text-muted-foreground">
+                <div>24h High: ${currentPrice.high24h.toLocaleString()}</div>
+                <div>24h Low: ${currentPrice.low24h.toLocaleString()}</div>
+                <div>Volume: {currentPrice.volume.toLocaleString()}</div>
+                <div>Updated: {new Date(currentPrice.lastUpdated).toLocaleTimeString()}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error Display */}
+      {useRealData && error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-red-600">
+              <WifiOff className="h-4 w-4" />
+              <span className="font-medium">Error fetching live data: {error}</span>
+            </div>
+            <p className="text-sm text-red-500 mt-1">
+              Falling back to sample data. Make sure the proxy server is running.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Chart Controls */}
@@ -331,8 +420,8 @@ export const ChartsTab = () => {
               {indicators.map((indicator) => (
                 <div key={indicator.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
+                    <div
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: indicator.color }}
                     />
                     <Label className="text-sm">{indicator.name}</Label>
@@ -354,7 +443,7 @@ export const ChartsTab = () => {
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Current Price</span>
                 <span className="font-semibold">
-                  {selectedExchange === "dhan" ? "₹" : "$"}{currentPrice.toLocaleString()}
+                  {selectedExchange === "dhan" ? "₹" : "$"}{sampleCurrentPrice.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -385,7 +474,7 @@ export const ChartsTab = () => {
                   <Badge variant="outline">{selectedExchange.charAt(0).toUpperCase() + selectedExchange.slice(1)}</Badge>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">
-                      {selectedExchange === "dhan" ? "₹" : "$"}{currentPrice.toLocaleString()}
+                      {selectedExchange === "dhan" ? "₹" : "$"}{sampleCurrentPrice.toLocaleString()}
                     </span>
                     <Badge variant={priceChange >= 0 ? "default" : "destructive"} className="gap-1">
                       {priceChange >= 0 ? (
@@ -407,7 +496,7 @@ export const ChartsTab = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div 
+              <div
                 ref={chartRef}
                 className="w-full h-96 bg-gradient-to-br from-muted/30 to-muted/10 rounded-lg border-2 border-dashed border-muted flex items-center justify-center"
               >
@@ -417,21 +506,21 @@ export const ChartsTab = () => {
                   <p className="text-muted-foreground mb-4">
                     Real-time {selectedSymbol} chart with {indicators.filter(ind => ind.enabled).length} active indicators
                   </p>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="font-semibold">OHLCV Data</div>
-                        <div className="text-muted-foreground">{chartData.length} candles loaded</div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">Timeframe</div>
-                        <div className="text-muted-foreground">
-                          {timeframes[selectedExchange as keyof typeof timeframes]?.find(tf => tf.value === selectedTimeframe)?.label}
-                        </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="font-semibold">OHLCV Data</div>
+                      <div className="text-muted-foreground">{chartData.length} candles loaded</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold">Timeframe</div>
+                      <div className="text-muted-foreground">
+                        {timeframes[selectedExchange as keyof typeof timeframes]?.find(tf => tf.value === selectedTimeframe)?.label}
                       </div>
                     </div>
+                  </div>
                 </div>
               </div>
-              
+
               {volumeChart && (
                 <div className="w-full h-24 bg-muted/20 rounded-lg mt-4 flex items-center justify-center">
                   <div className="text-center">
@@ -462,11 +551,11 @@ export const ChartsTab = () => {
                 <CardContent>
                   <div className="grid gap-3">
                     {symbols[selectedExchange as keyof typeof symbols]?.slice(0, 4).map((symbol, index) => {
-                      const mockPrice = selectedExchange === "dhan" 
+                      const mockPrice = selectedExchange === "dhan"
                         ? 2500 + (index * 200) + (Math.random() - 0.5) * 100
                         : 43000 + (index * 1000) + (Math.random() - 0.5) * 500;
                       const mockChange = (Math.random() - 0.5) * 10;
-                      
+
                       return (
                         <div key={symbol.value} className="flex items-center justify-between p-3 rounded-lg border">
                           <div className="flex items-center gap-3">
@@ -508,8 +597,8 @@ export const ChartsTab = () => {
                     )}
                   </CardTitle>
                   <CardDescription>
-                    {selectedExchange === "dhan" && livePatternDetection 
-                      ? "Real-time AI pattern detection with Dhan live data" 
+                    {selectedExchange === "dhan" && livePatternDetection
+                      ? "Real-time AI pattern detection with Dhan live data"
                       : "AI-detected chart patterns on current timeframe"
                     }
                   </CardDescription>
@@ -528,7 +617,7 @@ export const ChartsTab = () => {
                           </div>
                           <Badge className="bg-success text-success-foreground">92% confidence</Badge>
                         </div>
-                        
+
                         <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/10">
                           <div className="flex items-center gap-3">
                             <Target className="h-5 w-5 text-primary" />
@@ -563,7 +652,7 @@ export const ChartsTab = () => {
                           </div>
                           <Badge className="bg-success text-success-foreground">87% confidence</Badge>
                         </div>
-                        
+
                         <div className="flex items-center justify-between p-3 rounded-lg border">
                           <div className="flex items-center gap-3">
                             <TrendingDown className="h-5 w-5 text-destructive" />

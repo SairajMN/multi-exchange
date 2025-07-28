@@ -47,6 +47,7 @@ export const TradingDashboard = () => {
   });
 
   // Simulate real-time data updates
+  // TODO: Replace with actual API calls
   useEffect(() => {
     const interval = setInterval(() => {
       setMarketData([

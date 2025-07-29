@@ -319,48 +319,36 @@ export const ApiConfigTab = () => {
     }
   };
 
-  const testBybitConnection = async (config: ApiConfig): Promise<boolean> => {
-    try {
-      // First try to use the proxy server if available
-      try {
-        const proxyResponse = await fetch('http://localhost:3001/api/bybit/test', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            apiKey: config.apiKey,
-            secretKey: config.secretKey,
-            testnet: config.testnet
-          })
-        });
 
-        if (proxyResponse.ok) {
-          const result = await proxyResponse.json();
-          if (result.success) {
-            console.log('Bybit connection successful via proxy');
-            return true;
-          } else {
-            console.log('Bybit connection failed via proxy:', result.error);
-            return false;
-          }
-        }
-      } catch (proxyError) {
-        console.log('Proxy server not available, falling back to simulation');
+const testBybitConnection = async (config: ApiConfig): Promise<boolean> => {
+  try {
+    const proxyResponse = await fetch('http://localhost:3001/api/bybit/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        apiKey: config.apiKey,
+        secretKey: config.secretKey,
+        testnet: config.testnet
+      })
+    });
+
+    if (proxyResponse.ok) {
+      const result = await proxyResponse.json();
+      if (result.success) {
+        console.log('Bybit connection successful via proxy');
+        return true;
+      } else {
+        console.log('Bybit connection failed via proxy:', result.error);
+        return false;
       }
-
-      // Fallback: simulate connection test (no direct API calls to avoid CORS)
-      console.log('Simulating Bybit API connection test');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // For demo purposes, simulate success
-      // In production with proxy server, this would be a real API call
-      return true;
-    } catch (error) {
-      console.error('Bybit connection test failed:', error);
-      return false;
     }
-  };
+  } catch (error) {
+    console.error('Bybit connection test failed:', error);
+    return false;
+  }
+};
 
   const testDhanConnection = async (config: ApiConfig): Promise<boolean> => {
     try {

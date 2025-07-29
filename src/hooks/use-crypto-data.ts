@@ -19,6 +19,8 @@ interface KlineData {
     volume: number;
 }
 
+import { fetchBybitChartData } from '@/api/bybit';
+
 interface UseCryptoDataReturn {
     currentPrice: CryptoPrice | null;
     chartData: KlineData[];
@@ -28,7 +30,7 @@ interface UseCryptoDataReturn {
     fetchRealTimeData: (symbol: string, exchange: string) => void;
 }
 
-export const useCryptoData = (): UseCryptoDataReturn => {
+export const useCryptoData = (exchange: string, symbol: string): UseCryptoDataReturn => {
     const [currentPrice, setCurrentPrice] = useState<CryptoPrice | null>(null);
     const [chartData, setChartData] = useState<KlineData[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -134,23 +136,15 @@ export const useCryptoData = (): UseCryptoDataReturn => {
         }
     }, []);
 
+    const refreshData = useCallback(() => {
+        fetchPriceData(symbol, exchange);
+        fetchChartData(symbol, exchange);
+    }, [symbol, exchange, fetchPriceData, fetchChartData]);
+
     const fetchRealTimeData = useCallback((symbol: string, exchange: string) => {
         fetchPriceData(symbol, exchange);
         fetchChartData(symbol, exchange);
     }, [fetchPriceData, fetchChartData]);
 
-    const refreshData = useCallback(() => {
-        if (currentPrice) {
-            fetchRealTimeData(currentPrice.symbol, 'bybit'); // Default to bybit for now
-        }
-    }, [currentPrice, fetchRealTimeData]);
-
-    return {
-        currentPrice,
-        chartData,
-        isLoading,
-        error,
-        refreshData,
-        fetchRealTimeData
-    };
-}; 
+    return { currentPrice, chartData, isLoading, error, refreshData, fetchRealTimeData };
+};

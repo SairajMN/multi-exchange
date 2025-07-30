@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { 
   Activity, 
   BarChart3, 
@@ -27,18 +26,9 @@ import { ChartsTab } from "./tabs/ChartsTab";
 import { ProfileTab } from "./tabs/ProfileTab";
 import { OverviewTab } from "./tabs/OverviewTab";
 
-interface MarketData {
-  symbol: string;
-  price: number;
-  change24h: number;
-  volume: number;
-  exchange: string;
-}
-
 export const TradingDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [botStatus, setBotStatus] = useState<"running" | "stopped" | "error">("stopped");
-  const [marketData, setMarketData] = useState<MarketData[]>([]);
   const [connectionStatus, setConnectionStatus] = useState({
     binance: false,
     bybit: false,
@@ -46,36 +36,7 @@ export const TradingDashboard = () => {
     telegram: false
   });
 
-  // Simulate real-time data updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMarketData([
-        {
-          symbol: "BTCUSDT",
-          price: 43250 + (Math.random() - 0.5) * 1000,
-          change24h: (Math.random() - 0.5) * 10,
-          volume: 125000000,
-          exchange: "Binance"
-        },
-        {
-          symbol: "ETHUSDT", 
-          price: 2640 + (Math.random() - 0.5) * 100,
-          change24h: (Math.random() - 0.5) * 8,
-          volume: 95000000,
-          exchange: "Bybit"
-        },
-        {
-          symbol: "RELIANCE",
-          price: 2456 + (Math.random() - 0.5) * 50,
-          change24h: (Math.random() - 0.5) * 5,
-          volume: 12500000,
-          exchange: "Dhan"
-        }
-      ]);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const marketData: any[] = [];
 
   const handleBotToggle = () => {
     setBotStatus(prevStatus => 
@@ -129,13 +90,14 @@ export const TradingDashboard = () => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* All stats set to 0 or empty */}
         <Card className="border-l-4 border-l-primary">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium">Total P&L</p>
-                <p className="text-2xl font-bold text-success">+$12,485.32</p>
+                <p className="text-2xl font-bold text-success">$0.00</p>
               </div>
             </div>
           </CardContent>
@@ -147,7 +109,7 @@ export const TradingDashboard = () => {
               <TrendingUp className="h-5 w-5 text-success" />
               <div>
                 <p className="text-sm font-medium">Active Trades</p>
-                <p className="text-2xl font-bold">47</p>
+                <p className="text-2xl font-bold">0</p>
               </div>
             </div>
           </CardContent>
@@ -159,7 +121,7 @@ export const TradingDashboard = () => {
               <Activity className="h-5 w-5 text-info" />
               <div>
                 <p className="text-sm font-medium">Win Rate</p>
-                <p className="text-2xl font-bold">73.8%</p>
+                <p className="text-2xl font-bold">0%</p>
               </div>
             </div>
           </CardContent>
@@ -171,7 +133,7 @@ export const TradingDashboard = () => {
               <Zap className="h-5 w-5 text-warning" />
               <div>
                 <p className="text-sm font-medium">Patterns Detected</p>
-                <p className="text-2xl font-bold">24</p>
+                <p className="text-2xl font-bold">0</p>
               </div>
             </div>
           </CardContent>
@@ -188,32 +150,36 @@ export const TradingDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {marketData.map((data, index) => (
-              <div key={index} className="p-4 rounded-lg border bg-card">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold">{data.symbol}</span>
-                  <Badge variant="outline">{data.exchange}</Badge>
+            {marketData.length === 0 ? (
+              <div className="text-muted-foreground text-center col-span-3">No market data available.</div>
+            ) : (
+              marketData.map((data, index) => (
+                <div key={index} className="p-4 rounded-lg border bg-card">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold">{data.symbol}</span>
+                    <Badge variant="outline">{data.exchange}</Badge>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-2xl font-bold">
+                      ${data.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                    <div className={`flex items-center gap-1 ${data.change24h >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {data.change24h >= 0 ? (
+                        <TrendingUp className="h-4 w-4" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">
+                        {data.change24h >= 0 ? '+' : ''}{data.change24h.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Vol: ${data.volume.toLocaleString()}
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold">
-                    ${data.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </div>
-                  <div className={`flex items-center gap-1 ${data.change24h >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {data.change24h >= 0 ? (
-                      <TrendingUp className="h-4 w-4" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4" />
-                    )}
-                    <span className="font-medium">
-                      {data.change24h >= 0 ? '+' : ''}{data.change24h.toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Vol: ${data.volume.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
@@ -290,3 +256,5 @@ export const TradingDashboard = () => {
     </div>
   );
 };
+
+export default TradingDashboard;

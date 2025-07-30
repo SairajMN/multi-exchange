@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
-  MessageSquare, 
   Bot, 
   Send, 
   CheckCircle, 
@@ -59,36 +58,8 @@ export const TelegramTab = () => {
     }
   });
 
-  const [messages] = useState<TelegramMessage[]>([
-    {
-      id: "1",
-      type: "trade",
-      message: "🚀 BUY Signal: BTCUSDT at $43,250 | Pattern: Flag | Confidence: 84%",
-      timestamp: "2 min ago",
-      sent: true
-    },
-    {
-      id: "2",
-      type: "pattern",
-      message: "📊 Head & Shoulders detected on ETHUSDT | Bearish signal | Confidence: 76%",
-      timestamp: "5 min ago",
-      sent: true
-    },
-    {
-      id: "3",
-      type: "report",
-      message: "📈 Daily P&L Report: +$1,245.67 | Win Rate: 73.8% | Total Trades: 47",
-      timestamp: "8:00 AM",
-      sent: true
-    },
-    {
-      id: "4",
-      type: "system",
-      message: "⚠️ API Connection Lost: Binance | Attempting reconnection...",
-      timestamp: "12 min ago",
-      sent: false
-    }
-  ]);
+  // Remove all sample/mock messages
+  const [messages] = useState<TelegramMessage[]>([]);
 
   const [testMessage, setTestMessage] = useState("");
 
@@ -406,24 +377,28 @@ export const TelegramTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {messages.map((message) => (
-                  <div key={message.id} className="p-3 rounded-lg border">
-                    <div className="flex items-start gap-2">
-                      <span className="text-lg">{getMessageIcon(message.type)}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm break-words">{message.message}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-muted-foreground">{message.timestamp}</span>
-                          {message.sent ? (
-                            <CheckCircle className="h-3 w-3 text-success" />
-                          ) : (
-                            <XCircle className="h-3 w-3 text-destructive" />
-                          )}
+                {messages.length === 0 ? (
+                  <div className="text-muted-foreground text-center">No messages sent yet.</div>
+                ) : (
+                  messages.map((message) => (
+                    <div key={message.id} className="p-3 rounded-lg border">
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg">{getMessageIcon(message.type)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm break-words">{message.message}</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                            {message.sent ? (
+                              <CheckCircle className="h-3 w-3 text-success" />
+                            ) : (
+                              <XCircle className="h-3 w-3 text-destructive" />
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -438,19 +413,19 @@ export const TelegramTab = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm">Messages Sent Today</span>
-                <span className="text-sm font-medium">47</span>
+                <span className="text-sm font-medium">0</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Total Messages</span>
-                <span className="text-sm font-medium">1,234</span>
+                <span className="text-sm font-medium">0</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Success Rate</span>
-                <span className="text-sm font-medium text-success">99.2%</span>
+                <span className="text-sm font-medium text-success">0%</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm">Last Message</span>
-                <span className="text-sm font-medium">2 min ago</span>
+                <span className="text-sm font-medium">-</span>
               </div>
             </CardContent>
           </Card>

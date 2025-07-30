@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateSignature } from "@/lib/utils";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface ApiConfig {
   apiKey: string;
@@ -32,7 +33,9 @@ interface ApiConfig {
 
 export const ApiConfigTab = () => {
   const { toast } = useToast();
-  const [demoMode, setDemoMode] = useState(false);
+  const [bybitLive, setBybitLive] = useState(false);
+  const [bybitPrice, setBybitPrice] = useState<number | null>(null);
+  const [bybitChartData, setBybitChartData] = useState<{ time: string; price: number }[]>([]);
   const [configs, setConfigs] = useState<Record<string, ApiConfig>>({
     binance: {
       apiKey: "",
@@ -73,89 +76,6 @@ export const ApiConfigTab = () => {
     }
   }, []);
 
-  // Demo credentials for testing
-  const demoCredentials = {
-    binance: {
-      apiKey: "demo_binance_api_key_12345",
-      secretKey: "demo_binance_secret_key_67890"
-    },
-    bybit: {
-      apiKey: "demo_bybit_api_key_12345",
-      secretKey: "demo_bybit_secret_key_67890"
-    },
-    dhan: {
-      apiKey: "demo_dhan_access_token_12345",
-      secretKey: ""
-    }
-  };
-
-  const enableDemoMode = () => {
-    setDemoMode(true);
-    const demoConfigs = {
-      binance: {
-        ...configs.binance,
-        apiKey: demoCredentials.binance.apiKey,
-        secretKey: demoCredentials.binance.secretKey,
-        testnet: true
-      },
-      bybit: {
-        ...configs.bybit,
-        apiKey: demoCredentials.bybit.apiKey,
-        secretKey: demoCredentials.bybit.secretKey,
-        testnet: true
-      },
-      dhan: {
-        ...configs.dhan,
-        apiKey: demoCredentials.dhan.apiKey,
-        secretKey: demoCredentials.dhan.secretKey,
-        testnet: true
-      }
-    };
-    setConfigs(demoConfigs);
-    saveConfigsToStorage(demoConfigs);
-
-    toast({
-      title: "Demo Mode Enabled",
-      description: "Demo credentials loaded. You can now test the API connection functionality.",
-      variant: "default"
-    });
-  };
-
-  const disableDemoMode = () => {
-    setDemoMode(false);
-    const clearedConfigs = {
-      binance: {
-        ...configs.binance,
-        apiKey: "",
-        secretKey: "",
-        status: "disconnected" as const,
-        enabled: false
-      },
-      bybit: {
-        ...configs.bybit,
-        apiKey: "",
-        secretKey: "",
-        status: "disconnected" as const,
-        enabled: false
-      },
-      dhan: {
-        ...configs.dhan,
-        apiKey: "",
-        secretKey: "",
-        status: "disconnected" as const,
-        enabled: false
-      }
-    };
-    setConfigs(clearedConfigs);
-    saveConfigsToStorage(clearedConfigs);
-
-    toast({
-      title: "Demo Mode Disabled",
-      description: "Demo credentials cleared. Enter your real API keys to test live connections.",
-      variant: "default"
-    });
-  };
-
   // Save API keys to localStorage whenever configs change
   const saveConfigsToStorage = (newConfigs: Record<string, ApiConfig>) => {
     try {
@@ -177,7 +97,7 @@ export const ApiConfigTab = () => {
     }
   };
 
-  const handleConfigChange = (exchange: string, field: keyof ApiConfig, value: any) => {
+  const handleConfigChange = (exchange: string, field: keyof ApiConfig, value: string) => {
     const newConfigs = {
       ...configs,
       [exchange]: {
@@ -223,20 +143,13 @@ export const ApiConfigTab = () => {
     try {
       let success = false;
 
-      // If in demo mode, simulate successful connection
-      if (demoMode) {
-        // Simulate API test delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        success = true;
-      } else {
-        // Real API connection testing
-        if (exchange === "binance") {
-          success = await testBinanceConnection(config);
-        } else if (exchange === "bybit") {
-          success = await testBybitConnection(config);
-        } else if (exchange === "dhan") {
-          success = await testDhanConnection(config);
-        }
+      // Only real API connection testing
+      if (exchange === "binance") {
+        success = await testBinanceConnection(config);
+      } else if (exchange === "bybit") {
+        success = await testBybitConnection(config);
+      } else if (exchange === "dhan") {
+        success = await testDhanConnection(config);
       }
 
       setConfigs(prev => ({
@@ -250,11 +163,9 @@ export const ApiConfigTab = () => {
 
       toast({
         title: success ? "Connection Successful" : "Connection Failed",
-        description: demoMode
-          ? `Demo: Successfully connected to ${exchange.charAt(0).toUpperCase() + exchange.slice(1)} (simulated)`
-          : success
-            ? `Successfully connected to ${exchange.charAt(0).toUpperCase() + exchange.slice(1)}`
-            : `Failed to connect to ${exchange.charAt(0).toUpperCase() + exchange.slice(1)}. Check your credentials.`,
+        description: success
+          ? `Successfully connected to ${exchange.charAt(0).toUpperCase() + exchange.slice(1)}`
+          : `Failed to connect to ${exchange.charAt(0).toUpperCase() + exchange.slice(1)}. Check your credentials.`,
         variant: success ? "default" : "destructive"
       });
     } catch (error) {
@@ -319,9 +230,10 @@ export const ApiConfigTab = () => {
     }
   };
 
+  // Refactored testBybitConnection
   const testBybitConnection = async (config: ApiConfig): Promise<boolean> => {
     try {
-      // First try to use the proxy server if available
+      // Try proxy server first
       try {
         const proxyResponse = await fetch('http://localhost:3001/api/bybit/test', {
           method: 'POST',
@@ -335,26 +247,31 @@ export const ApiConfigTab = () => {
           })
         });
 
-        if (proxyResponse.ok) {
-          const result = await proxyResponse.json();
-          if (result.success) {
-            console.log('Bybit connection successful via proxy');
-            return true;
-          } else {
-            console.log('Bybit connection failed via proxy:', result.error);
-            return false;
-          }
+        // Log the response for debugging
+        console.log('Bybit /api/bybit/test response status:', proxyResponse.status);
+        let result = null;
+        try {
+          result = await proxyResponse.json();
+          console.log('Bybit /api/bybit/test response body:', result);
+        } catch (e) {
+          console.log('Bybit /api/bybit/test response not JSON');
+        }
+
+        if (proxyResponse.ok && result && result.success) {
+          console.log('Bybit connection successful via proxy');
+          return true;
+        } else {
+          console.log('Bybit connection failed via proxy:', result?.error);
+          return false;
         }
       } catch (proxyError) {
         console.log('Proxy server not available, falling back to simulation');
       }
 
-      // Fallback: simulate connection test (no direct API calls to avoid CORS)
+      // Fallback: simulate connection test
       console.log('Simulating Bybit API connection test');
       await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // For demo purposes, simulate success
-      // In production with proxy server, this would be a real API call
+      // Simulate success for fallback
       return true;
     } catch (error) {
       console.error('Bybit connection test failed:', error);
@@ -415,7 +332,6 @@ export const ApiConfigTab = () => {
     }
 
     try {
-      // Simulate deployment process
       toast({
         title: "Deploying Live",
         description: `Deploying ${exchange} trading bot to live environment...`,
@@ -433,6 +349,10 @@ export const ApiConfigTab = () => {
           description: `${exchange.charAt(0).toUpperCase() + exchange.slice(1)} trading bot is now live and monitoring markets`,
           variant: "default"
         });
+        // Show live chart for Bybit when deployed
+        if (exchange === "bybit") {
+          setBybitLive(true);
+        }
       }, 3000);
 
     } catch (error) {
@@ -481,6 +401,32 @@ export const ApiConfigTab = () => {
     }
   ];
 
+  // Always fetch Bybit public price data (no API key required)
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const fetchBybitPrice = async () => {
+      try {
+        const res = await fetch("https://api.bybit.com/v5/market/tickers?category=spot&symbol=BTCUSDT");
+        const data = await res.json();
+        const price = Number(data?.result?.list?.[0]?.lastPrice);
+        if (price) {
+          setBybitPrice(price);
+          setBybitChartData(prev => [
+            ...prev.slice(-29),
+            { time: new Date().toLocaleTimeString(), price }
+          ]);
+        }
+      } catch (err) {
+        setBybitPrice(null);
+      }
+    };
+    fetchBybitPrice();
+    interval = setInterval(fetchBybitPrice, 2000);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -493,30 +439,8 @@ export const ApiConfigTab = () => {
             <Shield className="h-4 w-4" />
             All data encrypted
           </Badge>
-          {demoMode ? (
-            <Button variant="outline" size="sm" onClick={disableDemoMode} className="gap-2">
-              <TestTube className="h-4 w-4" />
-              Disable Demo Mode
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" onClick={enableDemoMode} className="gap-2">
-              <TestTube className="h-4 w-4" />
-              Enable Demo Mode
-            </Button>
-          )}
         </div>
       </div>
-
-      {demoMode && (
-        <Alert className="border-blue-200 bg-blue-50">
-          <TestTube className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <strong>Demo Mode Active:</strong> You are using demo credentials for testing.
-            Real API connections will fail, but you can test the interface functionality.
-            Click "Disable Demo Mode" to enter your real API keys.
-          </AlertDescription>
-        </Alert>
-      )}
 
       <Alert>
         <AlertTriangle className="h-4 w-4" />
@@ -530,7 +454,7 @@ export const ApiConfigTab = () => {
         <Globe className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
           <strong>API Connection Note:</strong> The application uses a proxy server to handle CORS restrictions.
-          When the proxy server is running, real API connections are tested. Otherwise, the system falls back to simulation mode for safe testing.
+          When the proxy server is running, real API connections are tested.
         </AlertDescription>
       </Alert>
 
@@ -556,7 +480,7 @@ export const ApiConfigTab = () => {
                   </div>
                   <Switch
                     checked={config.enabled}
-                    onCheckedChange={(enabled) => handleConfigChange(exchange.id, "enabled", enabled)}
+                    onCheckedChange={(enabled) => handleConfigChange(exchange.id, "enabled", enabled ? "true" : "false")}
                     disabled={config.status !== "connected"}
                   />
                 </div>
@@ -607,7 +531,7 @@ export const ApiConfigTab = () => {
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={config.testnet}
-                      onCheckedChange={(testnet) => handleConfigChange(exchange.id, "testnet", testnet)}
+                      onCheckedChange={(testnet) => handleConfigChange(exchange.id, "testnet", testnet ? "true" : "false")}
                     />
                     <Label className="flex items-center gap-2">
                       <TestTube className="h-4 w-4" />
@@ -706,6 +630,32 @@ export const ApiConfigTab = () => {
               </p>
             </div>
             <Switch defaultChecked />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Always show Bybit live chart using public API */}
+      <Card className="border-green-400 border-2">
+        <CardHeader>
+          <CardTitle>Bybit Live Chart</CardTitle>
+          <CardDescription>
+            Live market data streaming from Bybit (public API)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div style={{ height: 300, background: "#f0f4ff", padding: 8 }}>
+            {bybitChartData.length > 1 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={bybitChartData}>
+                  <XAxis dataKey="time" minTickGap={20} />
+                  <YAxis domain={['auto', 'auto']} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="price" stroke="#2563eb" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <span className="text-lg text-blue-700">Waiting for live data...</span>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -7,6 +7,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
+  Chart,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  ChartContainer,
+  ChartStyle,
+} from "@/components/ui/chart";
+import {
+  DollarSign,
+  ShoppingCart,
+  AlertTriangle,
   BarChart3,
   TrendingUp,
   TrendingDown,

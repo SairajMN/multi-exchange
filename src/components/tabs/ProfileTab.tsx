@@ -57,52 +57,46 @@ interface TradingSettings {
 export const ProfileTab = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile>({
-    name: "Trading Bot User",
-    email: "user@example.com",
-    phone: "+1 234 567 8900",
+    name: "",
+    email: "",
+    phone: "",
     timezone: "UTC",
     language: "en",
-    bio: "Professional trader using automated strategies"
+    bio: ""
   });
 
   const [settings, setSettings] = useState<TradingSettings>({
     notifications: {
-      email: true,
+      email: false,
       sms: false,
-      push: true,
-      telegram: true
+      push: false,
+      telegram: false
     },
     preferences: {
-      darkMode: true,
-      soundAlerts: true,
-      autoSave: true,
-      confirmOrders: true
+      darkMode: false,
+      soundAlerts: false,
+      autoSave: false,
+      confirmOrders: false
     },
     limits: {
-      dailyLoss: 1000,
-      maxPositions: 10,
-      orderTimeout: 30
+      dailyLoss: 0,
+      maxPositions: 0,
+      orderTimeout: 0
     }
   });
 
   const tradingStats = {
-    totalTrades: 1247,
-    winRate: 73.8,
-    totalPnL: 12485.32,
-    activeDays: 89,
-    avgDailyReturn: 2.14,
-    sharpeRatio: 1.87,
-    maxDrawdown: 8.5,
-    profitFactor: 2.31
+    totalTrades: 0,
+    winRate: 0,
+    totalPnL: 0,
+    activeDays: 0,
+    avgDailyReturn: 0,
+    sharpeRatio: 0,
+    maxDrawdown: 0,
+    profitFactor: 0
   };
 
-  const achievements = [
-    { name: "First Trade", description: "Executed your first automated trade", date: "3 months ago", icon: "🎯" },
-    { name: "Profitable Month", description: "Achieved positive returns for a full month", date: "2 months ago", icon: "📈" },
-    { name: "Win Streak", description: "10 consecutive profitable trades", date: "1 month ago", icon: "🔥" },
-    { name: "Risk Manager", description: "Never exceeded daily loss limit", date: "2 weeks ago", icon: "🛡️" },
-    { name: "Pattern Master", description: "100+ patterns detected", date: "1 week ago", icon: "🧠" }
-  ];
+  const achievements: any[] = [];
 
   const updateProfile = () => {
     toast({
@@ -527,16 +521,20 @@ export const ProfileTab = () => {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4">
-                {achievements.map((achievement, index) => (
-                  <div key={index} className="flex items-center gap-4 p-4 rounded-lg border">
-                    <div className="text-2xl">{achievement.icon}</div>
-                    <div className="flex-1">
-                      <div className="font-semibold">{achievement.name}</div>
-                      <div className="text-sm text-muted-foreground">{achievement.description}</div>
+                {achievements.length === 0 ? (
+                  <div className="text-muted-foreground text-center">No achievements yet.</div>
+                ) : (
+                  achievements.map((achievement, index) => (
+                    <div key={index} className="flex items-center gap-4 p-4 rounded-lg border">
+                      <div className="text-2xl">{achievement.icon}</div>
+                      <div className="flex-1">
+                        <div className="font-semibold">{achievement.name}</div>
+                        <div className="text-sm text-muted-foreground">{achievement.description}</div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">{achievement.date}</div>
                     </div>
-                    <div className="text-sm text-muted-foreground">{achievement.date}</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

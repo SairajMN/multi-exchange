@@ -49,77 +49,8 @@ interface OrderHistory {
 
 export const TradingTab = () => {
   const { toast } = useToast();
-  const [activePositions] = useState<Position[]>([
-    {
-      id: "1",
-      symbol: "BTCUSDT",
-      side: "buy",
-      size: 0.5,
-      entryPrice: 42800,
-      currentPrice: 43250,
-      pnl: 225,
-      pnlPercent: 1.05,
-      exchange: "Binance",
-      timestamp: "2h ago"
-    },
-    {
-      id: "2",
-      symbol: "ETHUSDT",
-      side: "buy",
-      size: 2.5,
-      entryPrice: 2680,
-      currentPrice: 2640,
-      pnl: -100,
-      pnlPercent: -1.49,
-      exchange: "Bybit",
-      timestamp: "45m ago"
-    },
-    {
-      id: "3",
-      symbol: "RELIANCE",
-      side: "buy",
-      size: 100,
-      entryPrice: 2420,
-      currentPrice: 2456,
-      pnl: 3600,
-      pnlPercent: 1.49,
-      exchange: "Dhan",
-      timestamp: "1h ago"
-    }
-  ]);
-
-  const [orderHistory] = useState<OrderHistory[]>([
-    {
-      id: "1",
-      symbol: "BTCUSDT",
-      type: "buy",
-      amount: 0.25,
-      price: 43100,
-      status: "filled",
-      timestamp: "5 min ago",
-      exchange: "Binance"
-    },
-    {
-      id: "2",
-      symbol: "ETHUSDT",
-      type: "sell",
-      amount: 1.5,
-      price: 2650,
-      status: "pending",
-      timestamp: "8 min ago",
-      exchange: "Bybit"
-    },
-    {
-      id: "3",
-      symbol: "ADAUSDT",
-      type: "buy",
-      amount: 1000,
-      price: 0.485,
-      status: "filled",
-      timestamp: "12 min ago",
-      exchange: "Binance"
-    }
-  ]);
+  const [activePositions] = useState<Position[]>([]);
+  const [orderHistory] = useState<OrderHistory[]>([]);
 
   const [orderForm, setOrderForm] = useState({
     exchange: "binance",
@@ -237,63 +168,67 @@ export const TradingTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {activePositions.map((position) => (
-                  <div key={position.id} className="p-4 rounded-lg border">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${
-                          position.side === "buy" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
-                        }`}>
-                          {position.side === "buy" ? 
-                            <TrendingUp className="h-4 w-4" /> : 
-                            <TrendingDown className="h-4 w-4" />
-                          }
-                        </div>
-                        <div>
-                          <div className="font-semibold">{position.symbol}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {position.exchange} • {position.timestamp}
+                {activePositions.length === 0 ? (
+                  <div className="text-muted-foreground text-center">No open positions.</div>
+                ) : (
+                  activePositions.map((position) => (
+                    <div key={position.id} className="p-4 rounded-lg border">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${
+                            position.side === "buy" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
+                          }`}>
+                            {position.side === "buy" ? 
+                              <TrendingUp className="h-4 w-4" /> : 
+                              <TrendingDown className="h-4 w-4" />
+                            }
+                          </div>
+                          <div>
+                            <div className="font-semibold">{position.symbol}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {position.exchange} • {position.timestamp}
+                            </div>
                           </div>
                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => closePosition(position.id)}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Close
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => closePosition(position.id)}
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Close
-                      </Button>
-                    </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Size: </span>
-                        <span className="font-medium">{position.size}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Entry: </span>
-                        <span className="font-medium">${position.entryPrice.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Current: </span>
-                        <span className="font-medium">${position.currentPrice.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">P&L: </span>
-                        <span className={`font-medium ${position.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          ${position.pnl.toLocaleString()}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">%: </span>
-                        <span className={`font-medium ${position.pnlPercent >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          {position.pnlPercent >= 0 ? '+' : ''}{position.pnlPercent.toFixed(2)}%
-                        </span>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Size: </span>
+                          <span className="font-medium">{position.size}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Entry: </span>
+                          <span className="font-medium">${position.entryPrice.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Current: </span>
+                          <span className="font-medium">${position.currentPrice.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">P&L: </span>
+                          <span className={`font-medium ${position.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            ${position.pnl.toLocaleString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">%: </span>
+                          <span className={`font-medium ${position.pnlPercent >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {position.pnlPercent >= 0 ? '+' : ''}{position.pnlPercent.toFixed(2)}%
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -310,42 +245,46 @@ export const TradingTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {orderHistory.map((order) => (
-                  <div key={order.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-full ${
-                        order.type === "buy" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
-                      }`}>
-                        {order.type === "buy" ? 
-                          <TrendingUp className="h-4 w-4" /> : 
-                          <TrendingDown className="h-4 w-4" />
-                        }
-                      </div>
-                      <div>
-                        <div className="font-semibold">{order.symbol}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {order.exchange} • {order.timestamp}
+                {orderHistory.length === 0 ? (
+                  <div className="text-muted-foreground text-center">No order history.</div>
+                ) : (
+                  orderHistory.map((order) => (
+                    <div key={order.id} className="flex items-center justify-between p-3 rounded-lg border">
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-full ${
+                          order.type === "buy" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
+                        }`}>
+                          {order.type === "buy" ? 
+                            <TrendingUp className="h-4 w-4" /> : 
+                            <TrendingDown className="h-4 w-4" />
+                          }
+                        </div>
+                        <div>
+                          <div className="font-semibold">{order.symbol}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {order.exchange} • {order.timestamp}
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <div>{order.type.toUpperCase()} {order.amount}</div>
+                          <div className="text-muted-foreground">@ ${order.price.toLocaleString()}</div>
                         </div>
                       </div>
-                      <div className="text-sm">
-                        <div>{order.type.toUpperCase()} {order.amount}</div>
-                        <div className="text-muted-foreground">@ ${order.price.toLocaleString()}</div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(order.status)}
+                        {order.status === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => cancelOrder(order.id)}
+                          >
+                            Cancel
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(order.status)}
-                      {order.status === "pending" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => cancelOrder(order.id)}
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

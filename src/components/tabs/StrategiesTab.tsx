@@ -44,52 +44,7 @@ interface Strategy {
 
 export const StrategiesTab = () => {
   const { toast } = useToast();
-  const [strategies, setStrategies] = useState<Strategy[]>([
-    {
-      id: "rsi-scalping",
-      name: "RSI Scalping",
-      type: "Technical",
-      status: "active",
-      performance: {
-        totalTrades: 156,
-        winRate: 73.1,
-        pnl: 8450.32,
-        sharpeRatio: 2.14
-      },
-      parameters: {
-        rsiPeriod: 14,
-        oversoldLevel: 30,
-        overboughtLevel: 70,
-        positionSize: 0.02,
-        stopLoss: 0.015,
-        takeProfit: 0.025
-      },
-      exchanges: ["binance", "bybit"],
-      symbols: ["BTCUSDT", "ETHUSDT", "ADAUSDT"]
-    },
-    {
-      id: "ma-crossover",
-      name: "Moving Average Crossover",
-      type: "Trend Following",
-      status: "active",
-      performance: {
-        totalTrades: 89,
-        winRate: 64.2,
-        pnl: 5623.18,
-        sharpeRatio: 1.87
-      },
-      parameters: {
-        fastMA: 20,
-        slowMA: 50,
-        positionSize: 0.03,
-        stopLoss: 0.02,
-        takeProfit: 0.04
-      },
-      exchanges: ["binance"],
-      symbols: ["BTCUSDT", "ETHUSDT"]
-    }
-  ]);
-
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy | null>(null);
   const [activeTab, setActiveTab] = useState("existing");
 
@@ -162,101 +117,109 @@ export const StrategiesTab = () => {
 
         <TabsContent value="existing" className="space-y-4">
           <div className="grid gap-4">
-            {strategies.map((strategy) => (
-              <Card key={strategy.id} className="relative overflow-hidden">
-                <div className={`absolute top-0 left-0 w-full h-1 ${
-                  strategy.status === "active" ? "bg-success" : 
-                  strategy.status === "paused" ? "bg-warning" : "bg-muted"
-                }`} />
-                
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {strategy.name}
-                        <Badge variant={strategy.status === "active" ? "default" : "secondary"}>
-                          {strategy.status}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription>{strategy.type} Strategy</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedStrategy(strategy);
-                          setActiveTab("editor");
-                        }}
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => runBacktest(strategy.id)}
-                      >
-                        <TestTube className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant={strategy.status === "active" ? "destructive" : "default"}
-                        size="sm"
-                        onClick={() => toggleStrategy(strategy.id)}
-                      >
-                        {strategy.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">{strategy.performance.totalTrades}</div>
-                      <div className="text-sm text-muted-foreground">Total Trades</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-success">{strategy.performance.winRate}%</div>
-                      <div className="text-sm text-muted-foreground">Win Rate</div>
-                    </div>
-                    <div className="text-center">
-                      <div className={`text-2xl font-bold ${strategy.performance.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        ${strategy.performance.pnl.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-muted-foreground">P&L</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">{strategy.performance.sharpeRatio}</div>
-                      <div className="text-sm text-muted-foreground">Sharpe Ratio</div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm text-muted-foreground">Exchanges:</span>
-                      {strategy.exchanges.map(exchange => (
-                        <Badge key={exchange} variant="outline" className="text-xs">
-                          {exchange.charAt(0).toUpperCase() + exchange.slice(1)}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm text-muted-foreground">Symbols:</span>
-                      {strategy.symbols.slice(0, 3).map(symbol => (
-                        <Badge key={symbol} variant="outline" className="text-xs">
-                          {symbol}
-                        </Badge>
-                      ))}
-                      {strategy.symbols.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{strategy.symbols.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
+            {strategies.length === 0 ? (
+              <Card>
+                <CardContent className="flex items-center justify-center h-32">
+                  <div className="text-center text-muted-foreground">No strategies found. Create a new strategy to get started.</div>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              strategies.map((strategy) => (
+                <Card key={strategy.id} className="relative overflow-hidden">
+                  <div className={`absolute top-0 left-0 w-full h-1 ${
+                    strategy.status === "active" ? "bg-success" : 
+                    strategy.status === "paused" ? "bg-warning" : "bg-muted"
+                  }`} />
+                  
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="flex items-center gap-2">
+                          {strategy.name}
+                          <Badge variant={strategy.status === "active" ? "default" : "secondary"}>
+                            {strategy.status}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription>{strategy.type} Strategy</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStrategy(strategy);
+                            setActiveTab("editor");
+                          }}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => runBacktest(strategy.id)}
+                        >
+                          <TestTube className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={strategy.status === "active" ? "destructive" : "default"}
+                          size="sm"
+                          onClick={() => toggleStrategy(strategy.id)}
+                        >
+                          {strategy.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{strategy.performance.totalTrades}</div>
+                        <div className="text-sm text-muted-foreground">Total Trades</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-success">{strategy.performance.winRate}%</div>
+                        <div className="text-sm text-muted-foreground">Win Rate</div>
+                      </div>
+                      <div className="text-center">
+                        <div className={`text-2xl font-bold ${strategy.performance.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          ${strategy.performance.pnl.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-muted-foreground">P&L</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{strategy.performance.sharpeRatio}</div>
+                        <div className="text-sm text-muted-foreground">Sharpe Ratio</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-muted-foreground">Exchanges:</span>
+                        {strategy.exchanges.map(exchange => (
+                          <Badge key={exchange} variant="outline" className="text-xs">
+                            {exchange.charAt(0).toUpperCase() + exchange.slice(1)}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-muted-foreground">Symbols:</span>
+                        {strategy.symbols.slice(0, 3).map(symbol => (
+                          <Badge key={symbol} variant="outline" className="text-xs">
+                            {symbol}
+                          </Badge>
+                        ))}
+                        {strategy.symbols.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{strategy.symbols.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
 

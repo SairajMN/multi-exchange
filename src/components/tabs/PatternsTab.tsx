@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +20,8 @@ import {
   Download,
   Settings,
   Brain,
-  Camera
+  Camera,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CustomPatternCreator } from "@/components/patterns/CustomPatternCreator";
@@ -57,103 +57,48 @@ interface DetectedPattern {
 
 export const PatternsTab = () => {
   const { toast } = useToast();
-  const [patterns, setPatterns] = useState<Pattern[]>([
-    {
-      id: "head-shoulders",
-      name: "Head and Shoulders",
-      type: "bearish",
-      enabled: true,
-      confidence: 78,
-      detectedCount: 24,
-      successRate: 73.5,
-      description: "Classic reversal pattern indicating potential bearish trend",
-      parameters: {
-        minConfidence: 70,
-        lookbackPeriod: 100,
-        sensitivity: 0.8
-      }
-    },
-    {
-      id: "double-bottom",
-      name: "Double Bottom",
-      type: "bullish",
-      enabled: true,
-      confidence: 82,
-      detectedCount: 31,
-      successRate: 68.2,
-      description: "Bullish reversal pattern with two equal lows",
-      parameters: {
-        minConfidence: 75,
-        lookbackPeriod: 80,
-        sensitivity: 0.7
-      }
-    },
-    {
-      id: "ascending-triangle",
-      name: "Ascending Triangle",
-      type: "bullish",
-      enabled: false,
-      confidence: 65,
-      detectedCount: 18,
-      successRate: 61.1,
-      description: "Continuation pattern with rising support and horizontal resistance",
-      parameters: {
-        minConfidence: 60,
-        lookbackPeriod: 120,
-        sensitivity: 0.6
-      }
-    },
-    {
-      id: "flag-pattern",
-      name: "Flag Pattern",
-      type: "neutral",
-      enabled: true,
-      confidence: 88,
-      detectedCount: 42,
-      successRate: 79.8,
-      description: "Short-term continuation pattern following strong price movement",
-      parameters: {
-        minConfidence: 80,
-        lookbackPeriod: 50,
-        sensitivity: 0.9
-      }
-    }
-  ]);
-
-  const [detectedPatterns] = useState<DetectedPattern[]>([
-    {
-      id: "1",
-      symbol: "BTCUSDT",
-      pattern: "Head and Shoulders",
-      confidence: 84,
-      timestamp: "2 min ago",
-      price: 43250,
-      direction: "bearish",
-      status: "active"
-    },
-    {
-      id: "2",
-      symbol: "ETHUSDT",
-      pattern: "Double Bottom",
-      confidence: 91,
-      timestamp: "5 min ago",
-      price: 2640,
-      direction: "bullish",
-      status: "completed"
-    },
-    {
-      id: "3",
-      symbol: "ADAUSDT",
-      pattern: "Flag Pattern",
-      confidence: 76,
-      timestamp: "8 min ago",
-      price: 0.485,
-      direction: "bullish",
-      status: "active"
-    }
-  ]);
-
+  const [patterns, setPatterns] = useState<Pattern[]>([]);
+  const [detectedPatterns, setDetectedPatterns] = useState<DetectedPattern[]>([]);
   const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch real Bybit kline data and map to DetectedPattern[]
+  const fetchBybitKlines = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("https://api.bybit.com/v5/market/kline?category=spot&symbol=BTCUSDT&interval=60&limit=10");
+      const data = await res.json();
+      if (data?.result?.list) {
+        const klines = data.result.list;
+        // Map kline data to DetectedPattern[]
+        const mapped: DetectedPattern[] = klines.map((k: string[], idx: number) => ({
+          id: String(idx),
+          symbol: "BTCUSDT",
+          pattern: "Kline",
+          confidence: 100,
+          timestamp: new Date(Number(k[0])).toLocaleString(),
+          price: Number(k[4]),
+          direction: Number(k[4]) >= Number(k[1]) ? "bullish" : "bearish",
+          status: "completed"
+        }));
+        setDetectedPatterns(mapped);
+      } else {
+        setDetectedPatterns([]);
+        setError("No data returned from Bybit.");
+      }
+    } catch (e: any) {
+      setDetectedPatterns([]);
+      setError("Failed to fetch Bybit data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBybitKlines();
+  }, []);
 
   const updatePattern = (patternId: string, updates: Partial<Pattern>) => {
     setPatterns(prev => prev.map(pattern => 
@@ -321,43 +266,65 @@ export const PatternsTab = () => {
         <TabsContent value="detected" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                Live Pattern Detection
-              </CardTitle>
-              <CardDescription>Real-time pattern detection across all monitored symbols</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Live Pattern Detection
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={fetchBybitKlines}
+                  disabled={loading}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+              </div>
+              <CardDescription>Real-time pattern detection from Bybit BTCUSDT klines</CardDescription>
             </CardHeader>
             <CardContent>
+              {loading && (
+                <div className="text-center text-muted-foreground py-4">Loading...</div>
+              )}
+              {error && (
+                <div className="text-center text-destructive py-4">{error}</div>
+              )}
               <div className="space-y-3">
-                {detectedPatterns.map((detection) => (
-                  <div key={detection.id} className="flex items-center justify-between p-4 rounded-lg border">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-full ${
-                        detection.direction === "bullish" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
-                      }`}>
-                        {detection.direction === "bullish" ? 
-                          <TrendingUp className="h-4 w-4" /> : 
-                          <TrendingDown className="h-4 w-4" />
-                        }
-                      </div>
-                      <div>
-                        <div className="font-semibold">{detection.pattern}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {detection.symbol} • ${detection.price.toLocaleString()} • {detection.timestamp}
+                {!loading && !error && detectedPatterns.length === 0 ? (
+                  <div className="text-muted-foreground text-center">No patterns detected.</div>
+                ) : (
+                  detectedPatterns.map((detection) => (
+                    <div key={detection.id} className="flex items-center justify-between p-4 rounded-lg border">
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-full ${
+                          detection.direction === "bullish" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
+                        }`}>
+                          {detection.direction === "bullish" ? 
+                            <TrendingUp className="h-4 w-4" /> : 
+                            <TrendingDown className="h-4 w-4" />
+                          }
+                        </div>
+                        <div>
+                          <div className="font-semibold">{detection.pattern}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {detection.symbol} • ${detection.price.toLocaleString()} • {detection.timestamp}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-right mr-4">
-                        <div className="font-semibold">{detection.confidence}% confidence</div>
-                        {getStatusBadge(detection.status)}
+                      <div className="flex items-center gap-2">
+                        <div className="text-right mr-4">
+                          <div className="font-semibold">{detection.confidence}% confidence</div>
+                          {getStatusBadge(detection.status)}
+                        </div>
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -444,4 +411,4 @@ export const PatternsTab = () => {
       </Tabs>
     </div>
   );
-};
+}

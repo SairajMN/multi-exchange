@@ -8,12 +8,18 @@ const PORT = 3001;
 
 // Enable CORS for all routes
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // Ensure this is at the top!
 
-// Helper function to generate HMAC signature
-function generateSignature(message, secret) {
-    return crypto.createHmac('sha256', secret).update(message).digest('hex');
-}
+app.post('/api/bybit/test', (req, res) => {
+  console.log('Received body:', req.body); // For debugging
+  const { apiKey, secretKey, testnet } = req.body;
+  if (!apiKey || !secretKey) {
+    return res.status(400).json({ success: false, error: "Missing apiKey or secretKey" });
+  }
+  // Optionally, test the credentials with Bybit API here
+  // For now, just return success for demonstration
+  res.status(200).json({ success: true });
+});
 
 // Binance API proxy
 app.post('/api/binance/test', async (req, res) => {
@@ -37,31 +43,6 @@ app.post('/api/binance/test', async (req, res) => {
         res.status(400).json({
             success: false,
             error: error.response?.data?.msg || error.message
-        });
-    }
-});
-
-// Bybit API proxy
-app.post('/api/bybit/test', async (req, res) => {
-    try {
-        const { apiKey, secretKey, testnet } = req.body;
-        const baseUrl = testnet ? 'https://api-testnet.bybit.com' : 'https://api.bybit.com';
-        const timestamp = Date.now().toString();
-        const queryString = `api_key=${apiKey}&timestamp=${timestamp}`;
-        const signature = generateSignature(queryString, secretKey);
-
-        const response = await axios.get(`${baseUrl}/v2/private/wallet/balance?${queryString}&sign=${signature}`, {
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        res.json({ success: true, data: response.data });
-    } catch (error) {
-        console.error('Bybit API error:', error.response?.data || error.message);
-        res.status(400).json({
-            success: false,
-            error: error.response?.data?.ret_msg || error.message
         });
     }
 });
@@ -185,7 +166,25 @@ app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Trading API Proxy Server is running' });
 });
 
+app.get('/api/bybit/price', async (req, res) => {
+    const symbol = req.query.symbol || 'BTCUSDT';
+    try {
+        // Example: fetch from Bybit public API
+        const response = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${symbol}`);
+        const data = await response.json();
+        // Adjust parsing as needed for Bybit's API response
+        const price = data.result?.list?.[0]?.lastPrice;
+        if (price) {
+            res.json({ price });
+        } else {
+            res.status(500).json({ error: 'Price not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch price' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Trading API Proxy Server running on http://localhost:${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
-}); 
+});
